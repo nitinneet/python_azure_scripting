@@ -49,7 +49,7 @@ def connect_to_azure_subscription(subscription_id):
         # Initialize Resource Management client
         resource_client = ResourceManagementClient(credential, subscription_id)
 
-        print("Successfully connected to Azure subscription:", subscription_id)
+        print("##### Successfully connected to Azure subscription:", subscription_id,"#####")
 
         return resource_client
 
@@ -69,7 +69,7 @@ def validate_azure_subscription_connection(resource_client, subscription_id):
         resource_groups = resource_client.resource_groups.list()
 
         # If resource groups are listed without errors, the connection is successful
-        print("######## Resource groups in the subscription ######")
+        print("##### Resource groups in the subscription #####")
         for rg in resource_groups:
             print("-", rg.name)
 
@@ -91,7 +91,7 @@ resource_client = connect_to_azure_subscription(subscription_id)
 if resource_client:
     connection_validated = validate_azure_subscription_connection(resource_client, subscription_id)
     if connection_validated:
-        print(" ##### Azure subscription connection for Subscription:", subscription_id, "is valid #####")
+        print("##### Azure subscription connection for Subscription:", subscription_id, "is valid #####")
     else:
         print("Failed to validate Azure subscription connection for Subscription:", subscription_id)
 else:
@@ -100,4 +100,4 @@ else:
 # Get Azure JWT token
 azure_jwt_token = get_azure_jwt_token(subscription_id)
 if azure_jwt_token:
-    print("Azure JWT token for Subscription:", subscription_id, ":", azure_jwt_token)
+    print("##### Azure JWT token for Subscription:", subscription_id, "#####\n", azure_jwt_token)
