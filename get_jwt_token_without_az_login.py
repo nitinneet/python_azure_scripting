@@ -1,3 +1,8 @@
+#### First create a service principle ####
+#### run below command ####
+#### az ad sp create-for-rbac --name free-trial-sp --create-cert ####
+
+
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 import os
