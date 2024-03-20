@@ -1,19 +1,21 @@
-# from azure.identity import ClientSecretCredential
+# ### az ad sp create-for-rbac --name free-trial-sp --create-cert ###
+# from azure.identity import DefaultAzureCredential
 
-# # Set your Azure tenant ID, client ID, and client secret
-# TENANT_ID = ''
-# CLIENT_ID = ''
-# CLIENT_SECRET = ''
+# # Replace the value with the path to your certificate file
+# CERTIFICATE_PATH = '/Users/admin/tmpojmg62vt.pem'
 
-# # Create a ClientSecretCredential object
-# credential = ClientSecretCredential(TENANT_ID, CLIENT_ID, CLIENT_SECRET)
+# # Create an instance of DefaultAzureCredential with certificate authentication
+# credential = DefaultAzureCredential(
+#     certificate_path=CERTIFICATE_PATH
+# )
 
-# # Obtain an access token
-# access_token = credential.get_token("https://graph.microsoft.com/.default")
+# # Use the credential to authenticate and obtain a token
+# token = credential.get_token("https://vault.azure.net/.default")
 
-# # Extract the JWT token
-# jwt_token = access_token.token
+# # Extract the JWT token from the token object
+# jwt_token = token.token
 
+# # Print the JWT token
 # print("JWT Token:", jwt_token)
 
 from azure.identity import DefaultAzureCredential
