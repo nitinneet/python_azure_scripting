@@ -1,0 +1,67 @@
+name: Azure Key Vault Authentication
+
+on:
+  push:
+
+jobs:
+  authenticate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install azure-identity azure-keyvault-secrets
+
+      - name: Authenticate with Azure Key Vault
+        id: auth
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          KEY_VAULT_URL: ${{ secrets.KEY_VAULT_URL }}
+          CERTIFICATE_SECRET_NAME: ${{ secrets.CERTIFICATE_SECRET_NAME }}
+        run: |
+          from azure.identity import CertificateCredential
+          from azure.keyvault.secrets import SecretClient
+
+          # Retrieve secrets from environment variables
+          tenant_id = os.environ["AZURE_TENANT_ID"]
+          client_id = os.environ["AZURE_CLIENT_ID"]
+          vault_url = os.environ["KEY_VAULT_URL"]
+          certificate_secret_name = os.environ["CERTIFICATE_SECRET_NAME"]
+
+          # Create a CertificateCredential for authentication
+          credential = CertificateCredential(tenant_id, client_id, certificate_path=None)
+
+          # Use the credential to authenticate and access Azure Key Vault
+          client = SecretClient(vault_url=vault_url, credential=credential)
+
+          # Use the client to retrieve the secret from Key Vault
+          certificate_secret = client.get_secret(certificate_secret_name)
+
+          # Decode the certificate secret value (assuming it's base64 encoded)
+          certificate_base64 = certificate_secret.value
+          certificate_bytes = certificate_base64.encode("ascii")
+
+          # Use the certificate bytes for further authentication or actions
+
+        continue-on-error: true
+
+      - name: Use authenticated token
+        if: success()
+        run: |
+          # Use the authenticated token for further actions
+          # For example, you can use it to access Azure services
+
+      - name: Handle authentication failure
+        if: failure()
+        run: |
+          echo "Authentication with Azure Key Vault failed. Please check your credentials."
