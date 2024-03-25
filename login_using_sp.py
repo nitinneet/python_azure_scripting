@@ -8,7 +8,7 @@ from azure.identity import CertificateCredential, DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
 # Define Azure Key Vault URL
-vault_url = "https://free-trial-new.vault.azure.net/"
+vault_url = ""
 
 # Name of the certificate secret imported into Azure Key Vault
 certificate_secret_name = "sp-new-pem-key"
