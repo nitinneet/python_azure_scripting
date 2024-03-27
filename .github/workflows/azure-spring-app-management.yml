@@ -8,31 +8,30 @@ on:
         description: 'Manage Spring App (start, stop, restart)'
         required: true
         options:
-        - start
-        - stop
-        - restart
+          - start
+          - stop
+          - restart
 
 jobs:
   manage-spring-app:
     runs-on: self-hosted
     steps:
+      - uses: azure/login@v2
+        with:
+          creds: |
+            {
+              "clientId": ${{ secrets.AZURE_CLIENT_ID }},
+              "clientSecret": ${{ secrets.AZURE_CLIENT_SECRET }},
+              "subscriptionId": ${{ secrets.AZURE_SUBSCRIPTION_ID }},
+              "tenantId": ${{ secrets.AZURE_TENANT_ID }}
+            }
     
-    - uses: azure/login@v2
-      with:
-        creds: |
-          {
-            "clientId": ${{ secrets.AZURE_CLIENT_ID }},
-            "clientSecret": ${{ secrets.AZURE_CLIENT_SECRET }},
-            "subscriptionId": ${{ secrets.AZURE_SUBSCRIPTION_ID }},
-            "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
-          }
-    
-    - name: Manage Azure Spring App
-      run: |
-        if [ "${{ github.event.inputs.action }}" == "start" ]; then
-          az spring app start --name "hello-world-app" --service "free-trial-spring-app" --resource-group "free-trial-rg"
-        elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
-          az spring app stop --name "hello-world-app" --service "free-trial-spring-app" --resource-group "free-trial-rg"
-        elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
-          az spring app restart --name "hello-world-app" --service "free-trial-spring-app" --resource-group "free-trial-rg"
-        fi
+      - name: Manage Azure Spring App
+        run: |
+          if [ "${{ github.event.inputs.action }}" == "start" ]; then
+            az spring app start --name "hello-world-app" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+          elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
+            az spring app stop --name "hello-world-app" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+          elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
+            az spring app restart --name "hello-world-app" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+          fi
