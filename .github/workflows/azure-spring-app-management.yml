@@ -1,0 +1,32 @@
+name: Azure Spring App Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        description: 'Manage Spring App (start, stop, restart)'
+        required: true
+        options:
+        - start
+        - stop
+        - restart
+
+jobs:
+  manage-spring-app:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Manage Azure Spring App
+      run: |
+        if [ "${{ github.event.inputs.action }}" == "start" ]; then
+          az spring app start --name "hello-world-app" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+        elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
+          az spring app stop --name "hello-world-app" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+        elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
+          az spring app restart --name "hello-world-app" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+        fi
