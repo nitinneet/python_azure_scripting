@@ -20,10 +20,10 @@ jobs:
         uses: azure/login@v2
         with:
           auth-type: IDENTITY
-          clientSecret:  "D4x8Q~TubrFIbXL7c_hBpZLTNaHUYt.TzoaNeafL"
-          subscriptionId:  "d7b03374-1a6c-489e-aeea-7ee84923bf47"
-          tenantId:  "19e689b1-e574-48c3-b0c4-955bb7215eef"
-          clientId:  "9c358930-8ffc-41c7-95f5-07cbad713e59"
+          clientSecret:  ""
+          subscriptionId:  ""
+          tenantId:  ""
+          clientId:  ""
 
       - name: Manage Azure Spring App
         run: |
