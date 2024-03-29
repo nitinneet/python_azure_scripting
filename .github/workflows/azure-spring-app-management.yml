@@ -24,9 +24,6 @@ on:
 jobs:
   manage-spring-app:
     runs-on: self-hosted
-    strategy:
-      matrix:
-        app_name: ${{ matrix.app_names }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -48,32 +45,14 @@ jobs:
 
       - name: Execute action on app
         run: |
-          if [ "${{ github.event.inputs.action }}" == "start" ]; then
-            az spring app start --name "${{ matrix.app_name }}" --service "free-trial-spring-app" --resource-group "free-trial-rg"
-          elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
-            az spring app stop --name "${{ matrix.app_name }}" --service "free-trial-spring-app" --resource-group "free-trial-rg"
-          elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
-            az spring app restart --name "${{ matrix.app_name }}" --service "free-trial-spring-app" --resource-group "free-trial-rg"
-          fi
+          for app_name in ${{ steps.get-app-names.outputs.app_names }}; do
+            if [ "${{ github.event.inputs.action }}" == "start" ]; then
+              az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
+            elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
+              az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
+            elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
+              az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
+            fi
+          done
         env:
-          AZURE_APP_NAME: ${{ matrix.app_name }}
-        continue-on-error: true
-
-  set-matrix:
-    needs: manage-spring-app
-    runs-on: self-hosted
-    steps:
-      - name: Set matrix
-        run: |
-          echo "::set-output name=app_names::${{ steps.get-app-names.outputs.app_names | join('\n') }}"
-        id: set-matrix-data
-
-      - name: Create execution matrix
-        run: |
-          echo "${{ steps.set-matrix-data.outputs.app_names }}"
-        id: app-names
-        shell: bash
-
-      - name: Finalize matrix
-        run: |
-          echo "::set-output name=app_names::${{ steps.app-names.outputs.stdout }}"
+          AZURE_APP_NAME: ${{ steps.get-app-names.outputs.app_names }}
