@@ -16,6 +16,7 @@ on:
         description: 'Name of the Azure Spring App'
         required: true
         options:
+          - ALL            # Add 'ALL' as an option
           - hello-world-app
           - another-app-name
           - yet-another-app-name
@@ -32,12 +33,41 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Manage Azure Spring App
+      - name: Check if action is ALL
+        id: check-action
         run: |
-          if [ "${{ github.event.inputs.action }}" == "start" ]; then
-            az spring app start --name "${{ github.event.inputs.app_name }}" --service "free-trial-spring-app" --resource-group "free-trial-rg"
-          elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
-            az spring app stop --name "${{ github.event.inputs.app_name }}" --service "free-trial-spring-app" --resource-group "free-trial-rg"
-          elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
-            az spring app restart --name "${{ github.event.inputs.app_name }}" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+          if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
+            all_apps=true
+          else
+            all_apps=false
+          fi
+          echo "::set-output name=all_apps::$all_apps"
+
+      - name: Get list of app names
+        id: get-app-names
+        if: steps.check-action.outputs.all_apps == 'true'
+        run: |
+          app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o tsv)
+          echo "::set-output name=app_names::$app_names"
+
+      - name: Manage Azure Spring Apps
+        run: |
+          if [ "${{ steps.check-action.outputs.all_apps }}" == 'true' ]; then
+            for app_name in ${{ steps.get-app-names.outputs.app_names }}; do
+              if [ "${{ github.event.inputs.action }}" == "start" ]; then
+                az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+              elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
+                az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+              elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
+                az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+              fi
+            done
+          else
+            if [ "${{ github.event.inputs.action }}" == "start" ]; then
+              az spring app start --name "${{ github.event.inputs.app_name }}" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+            elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
+              az spring app stop --name "${{ github.event.inputs.app_name }}" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+            elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
+              az spring app restart --name "${{ github.event.inputs.app_name }}" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+            fi
           fi
