@@ -12,6 +12,7 @@ on:
           - stop
           - restart
       app_name:
+        type: choice
         description: 'Name of the Azure Spring App'
         required: true
         options:
