@@ -11,6 +11,14 @@ on:
           - start
           - stop
           - restart
+      app_name:
+        description: 'Name of the Azure Spring App'
+        required: true
+        options:
+          - app_1
+          - app_2
+          - app_3
+          - hello-world-app
 
 jobs:
   manage-spring-app:
@@ -24,21 +32,12 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # - name: Login to Azure
-      #   uses: azure/login@v1
-      #   with:
-      #     creds: ${{ secrets.AZURE_CLIENT_ID }}
-      #     client-id: ${{ secrets.AZURE_CLIENT_ID }}
-      #     client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-      #     tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-      #     subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
       - name: Manage Azure Spring App
         run: |
           if [ "${{ github.event.inputs.action }}" == "start" ]; then
-            az spring app start --name "hello-world-app" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+            az spring app start --name "${{ github.event.inputs.app_name }}" --service "free-trial-spring-app" --resource-group "free-trial-rg"
           elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
-            az spring app stop --name "hello-world-app" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+            az spring app stop --name "${{ github.event.inputs.app_name }}" --service "free-trial-spring-app" --resource-group "free-trial-rg"
           elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
-            az spring app restart --name "hello-world-app" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+            az spring app restart --name "${{ github.event.inputs.app_name }}" --service "free-trial-spring-app" --resource-group "free-trial-rg"
           fi
