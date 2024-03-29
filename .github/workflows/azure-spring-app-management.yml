@@ -15,10 +15,9 @@ on:
         description: 'Name of the Azure Spring App'
         required: true
         options:
-          - app_1
-          - app_2
-          - app_3
           - hello-world-app
+          - another-app-name
+          - yet-another-app-name
 
 jobs:
   manage-spring-app:
