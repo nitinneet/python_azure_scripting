@@ -18,7 +18,7 @@ on:
         options:
           - ALL            # Add 'ALL' as an option
           - hello-world-app
-          - another-app-name
+          - hello-india
           - yet-another-app-name
 
 jobs:
@@ -73,4 +73,4 @@ jobs:
           else
             app_names="[\"${{ github.event.inputs.app_name }}\"]"
           fi
-          echo "::set-output name=app_names::$app_names"
+          echo "APP_NAMES=$app_names" >> $GITHUB_ENV
