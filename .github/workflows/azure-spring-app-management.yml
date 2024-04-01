@@ -24,6 +24,7 @@ on:
 jobs:
   manage-spring-app:
     runs-on: self-hosted
+    needs: get-app-names  # Ensure the manage-spring-app job depends on get-app-names
     strategy:
       matrix:
         app_name: ${{fromJson(needs.get-app-names.outputs.app_names)}}
