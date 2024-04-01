@@ -25,9 +25,6 @@ jobs:
   manage-spring-app:
     runs-on: self-hosted
     needs: get-app-names
-    strategy:
-      matrix:
-        app_name: ${{ fromJSON(needs.get-app-names.outputs.app_names) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -39,11 +36,7 @@ jobs:
 
       - name: Execute action on app
         run: |
-          if [ "${{ matrix.app_name }}" == "ALL" ]; then
-            app_names=$(echo "${{ needs.get-app-names.outputs.app_names }}" | jq -r '.[]')
-          else
-            app_names="${{ matrix.app_name }}"
-          fi
+          app_names=$(echo "${{ needs.get-app-names.outputs.app_names }}" | jq -r '.[]')
 
           for app_name in $app_names; do
             if [ "${{ github.event.inputs.action }}" == "start" ]; then
