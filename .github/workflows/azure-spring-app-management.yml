@@ -24,10 +24,7 @@ on:
 jobs:
   manage-spring-app:
     runs-on: self-hosted
-    needs: get-app-names  # Ensure the manage-spring-app job depends on get-app-names
-    strategy:
-      matrix:
-        app_name: ${{fromJson(needs.get-app-names.outputs.app_names)}}
+    needs: get-app-names
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -37,21 +34,24 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Parse JSON output
+        id: parse-json
+        run: |
+          echo "::set-output name=app_names::${{ toJson(needs.get-app-names.outputs.app_names) }}"
+
       - name: Execute action on app
         run: |
-          if [ "${{ matrix.app_name }}" == "ALL" ]; then
-            app_name="${{ github.event.inputs.app_name }}"
-          else
-            app_name="${{ matrix.app_name }}"
-          fi
+          app_names=$(echo "${{ steps.parse-json.outputs.app_names }}" | jq -r '.[]')
 
-          if [ "${{ github.event.inputs.action }}" == "start" ]; then
-            az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
-          elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
-            az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
-          elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
-            az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
-          fi
+          for app_name in $app_names; do
+            if [ "${{ github.event.inputs.action }}" == "start" ]; then
+              az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+            elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
+              az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+            elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
+              az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+            fi
+          done
         env:
           AZURE_APP_NAME: ${{ matrix.app_name }}
         continue-on-error: true
