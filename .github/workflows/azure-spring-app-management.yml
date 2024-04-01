@@ -24,7 +24,9 @@ on:
 jobs:
   manage-spring-app:
     runs-on: self-hosted
-    needs: get-app-names
+    strategy:
+      matrix:
+        app_name: ${{fromJson(needs.get-app-names.outputs.app_names)}}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -34,44 +36,21 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Parse JSON output
-        id: parse-json
-        run: |
-          echo "::set-output name=app_names::${{ toJson(needs.get-app-names.outputs.app_names) }}"
-
       - name: Execute action on app
         run: |
-          app_names=$(echo "${{ steps.parse-json.outputs.app_names }}" | jq -r '.[]')
+          if [ "${{ matrix.app_name }}" == "ALL" ]; then
+            app_names=$(echo "${{ needs.get-app-names.outputs.app_names }}" | tr ',' '\n')
+          else
+            app_names="${{ matrix.app_name }}"
+          fi
 
           for app_name in $app_names; do
             if [ "${{ github.event.inputs.action }}" == "start" ]; then
-              az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+              az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
             elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
-              az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+              az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
             elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
-              az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+              az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
             fi
           done
-        env:
-          AZURE_APP_NAME: ${{ matrix.app_name }}
         continue-on-error: true
-
-  get-app-names:
-    runs-on: self-hosted
-    outputs:
-      app_names: ${{ steps.set-app-names.outputs.app_names }}
-    steps:
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Get list of app names
-        id: set-app-names
-        run: |
-          if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
-            app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o json)
-          else
-            app_names="[\"${{ github.event.inputs.app_name }}\"]"
-          fi
-          echo "::set-output name=app_names::$app_names"
