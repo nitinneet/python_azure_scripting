@@ -69,8 +69,9 @@ jobs:
         id: set-app-names
         run: |
           if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
-            app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o json)
+            app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o tsv)
           else
-            app_names="[\"${{ github.event.inputs.app_name }}\"]"
+            app_names="${{ github.event.inputs.app_name }}"
           fi
           echo "APP_NAMES=$app_names" >> $GITHUB_ENV
+          
