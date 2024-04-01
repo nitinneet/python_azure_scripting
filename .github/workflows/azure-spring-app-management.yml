@@ -24,6 +24,9 @@ on:
 jobs:
   manage-spring-app:
     runs-on: self-hosted
+    strategy:
+      matrix:
+        app_name: ${{ fromJson(steps.get-app-names.outputs.app_names) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -33,27 +36,36 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Get list of app names
-        id: get-app-names
-        run: |
-          if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
-            app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o tsv)
-          else
-            app_names="${{ github.event.inputs.app_name }}"
-          fi
-          echo "::set-output name=app_names::$app_names"
-
       - name: Execute action on app
         run: |
-          for app_name in ${{ steps.get-app-names.outputs.app_names }}; do
-            if [ "${{ github.event.inputs.action }}" == "start" ]; then
-              az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" || echo "::error ::App $app_name does not exist or could not be started."
-            elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
-              az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" || echo "::error ::App $app_name does not exist or could not be stopped."
-            elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
-              az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" || echo "::error ::App $app_name does not exist or could not be restarted."
-            fi
-          done
-        env:
-          AZURE_APP_NAME: ${{ steps.get-app-names.outputs.app_names }}
+          if [ "${{ matrix.app_name }}" == "ALL" ]; then
+            app_name="${{ github.event.inputs.app_name }}"
+          else
+            app_name="${{ matrix.app_name }}"
+          fi
 
+          if [ "${{ github.event.inputs.action }}" == "start" ]; then
+            az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+          elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
+            az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+          elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
+            az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+          fi
+        env:
+          AZURE_APP_NAME: ${{ matrix.app_name }}
+        continue-on-error: true
+
+  get-app-names:
+    runs-on: self-hosted
+    outputs:
+      app_names: ${{ steps.set-app-names.outputs.app_names }}
+    steps:
+      - name: Get list of app names
+        id: set-app-names
+        run: |
+          if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
+            app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o json)
+          else
+            app_names="[\"${{ github.event.inputs.app_name }}\"]"
+          fi
+          echo "::set-output name=app_names::$app_names"
