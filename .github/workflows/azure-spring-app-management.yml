@@ -12,7 +12,7 @@ on:
           - stop
           - restart
       app_name:
-        # type: choice
+        type: choice
         description: 'Name of the Azure Spring App'
         required: true
         options:
@@ -26,7 +26,7 @@ jobs:
     runs-on: self-hosted
     strategy:
       matrix:
-        app_name: ${{ fromJson(steps.get-app-names.outputs.app_names) }}
+        app_name: ${{fromJson(needs.get-app-names.outputs.app_names)}}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
