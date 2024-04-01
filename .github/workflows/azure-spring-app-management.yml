@@ -56,30 +56,37 @@ jobs:
         shell: bash
 
   validate-app-status:
-    runs-on: self-hosted
-    needs: manage-spring-app
-    steps:
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      runs-on: self-hosted
+      needs: manage-spring-app
+      steps:
+        - name: Login to Azure
+          uses: azure/login@v1
+          with:
+            creds: ${{ secrets.AZURE_CREDENTIALS }}
   
-      - name: Wait for apps to start/stop/restart
-        run: sleep 300  # Wait for 5 minutes
-        shell: bash
+        - name: Wait for apps to start/stop/restart
+          run: sleep 30  # Wait for 5 minutes
+          shell: bash
   
-      - name: Validate app status
-        run: |
-          if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
-            app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o tsv)
-          else
-            app_names="${{ github.event.inputs.app_name }}"
-          fi
-  
-          for app_name in $app_names; do
-            status=$(az spring app show --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "properties.activeDeployment.properties.status" -o tsv)
-            if [ $? -eq 0 ]; then
-              if [ -z "$status" ]; then
-                echo "App $app_name status: Not started/stopped yet."
+        - name: Validate app status
+          run: |
+            if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
+              app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o tsv)
+            else
+              app_names="${{ github.event.inputs.app_name }}"
+            fi
+
+            for app_name in $app_names; do
+              status=$(az spring app show --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "properties.activeDeployment.properties.status" -o tsv)
+              if [ $? -eq 0 ]; then
+                if [ -z "$status" ]; then
+                  echo "App $app_name status: Not started/stopped yet."
+                else
+                  echo "App $app_name status: $status"
+                fi
               else
-                echo "App $app
+                echo "Failed to get status for app $app_name"
+                exit 1
+              fi
+            done
+          shell: bash
