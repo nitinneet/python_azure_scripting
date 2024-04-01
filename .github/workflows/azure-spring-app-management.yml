@@ -47,3 +47,38 @@ jobs:
             fi
           done
         shell: bash
+
+      - name: Check for errors
+        run: |
+          if [ $? -ne 0 ]; then
+            echo "An error occurred while executing the action on the app."
+            exit 1
+          fi
+        shell: bash
+
+  validate-app-status:
+    runs-on: self-hosted
+    needs: manage-spring-app
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Validate app status
+        run: |
+          app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o json | jq -r '.[]')
+
+          for app_name in $app_names; do
+            status=$(az spring app show --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "properties.activeDeployment.status" -o tsv)
+            if [ $? -eq 0 ]; then
+              echo "App $app_name status: $status"
+            else
+              echo "Failed to get status for app $app_name"
+              exit 1
+            fi
+          done
+        shell: bash
