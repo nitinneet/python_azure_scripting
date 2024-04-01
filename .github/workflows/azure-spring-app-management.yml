@@ -37,13 +37,34 @@ jobs:
           fi
 
           for app_name in $app_names; do
-            if [ "${{ github.event.inputs.action }}" == "start" ]; then
-              az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
-            elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
-              az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
-            elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
-              az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
-            fi
+            current_status=$(az spring app show --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "properties.activeDeployment.properties.status" -o tsv)
+
+            case "${{ github.event.inputs.action }}" in
+              "start")
+                if [ "$current_status" == "Stopped" ]; then
+                  az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
+                else
+                  echo "Warning: Cannot start the app '$app_name' because it is already running."
+                fi
+                ;;
+              "stop")
+                if [ "$current_status" == "Running" ]; then
+                  az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
+                else
+                  echo "Warning: Cannot stop the app '$app_name' because it is already stopped."
+                fi
+                ;;
+              "restart")
+                if [ "$current_status" == "Running" ]; then
+                  az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
+                elif [ "$current_status" == "Stopped" ]; then
+                  echo "Warning: Cannot restart the app '$app_name' because it is already stopped."
+                fi
+                ;;
+              *)
+                echo "Invalid action specified."
+                ;;
+            esac
           done
         shell: bash
 
