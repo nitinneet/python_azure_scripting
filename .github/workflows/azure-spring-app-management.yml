@@ -47,12 +47,13 @@ jobs:
         run: |
           for app_name in ${{ steps.get-app-names.outputs.app_names }}; do
             if [ "${{ github.event.inputs.action }}" == "start" ]; then
-              az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
+              az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" || echo "::error ::App $app_name does not exist or could not be started."
             elif [ "${{ github.event.inputs.action }}" == "stop" ]; then
-              az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
+              az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" || echo "::error ::App $app_name does not exist or could not be stopped."
             elif [ "${{ github.event.inputs.action }}" == "restart" ]; then
-              az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" &
+              az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" || echo "::error ::App $app_name does not exist or could not be restarted."
             fi
           done
         env:
           AZURE_APP_NAME: ${{ steps.get-app-names.outputs.app_names }}
+
