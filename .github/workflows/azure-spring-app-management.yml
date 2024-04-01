@@ -64,7 +64,7 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-  
+
       - name: Get list of app names
         id: set-app-names
         run: |
@@ -73,5 +73,6 @@ jobs:
           else
             app_names="${{ github.event.inputs.app_name }}"
           fi
-          echo "APP_NAMES=$app_names" >> $GITHUB_ENV
-
+          printf -v app_names_str '%s,' $app_names
+          app_names_str="${app_names_str%,}"  # Remove the trailing comma
+          echo "APP_NAMES=$app_names_str" >> $GITHUB_ENV
