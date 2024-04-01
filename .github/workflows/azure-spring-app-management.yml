@@ -57,28 +57,34 @@ jobs:
         shell: bash
 
   validate-app-status:
-    runs-on: self-hosted
-    needs: manage-spring-app
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      runs-on: self-hosted
+      needs: manage-spring-app
+      steps:
+        - name: Login to Azure
+          uses: azure/login@v1
+          with:
+            creds: ${{ secrets.AZURE_CREDENTIALS }}
+  
+        - name: Wait for apps to start/stop/restart
+          run: sleep 5m  # Wait for 5 minutes
+          shell: bash
+  
+        - name: Validate app status
+          run: |
+            app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o json | jq -r '.[]')
+  
+            for app_name in $app_names; do
+              status=$(az spring app show --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "properties.activeDeployment.status" -o tsv)
+              if [ $? -eq 0 ]; then
+                if [ -z "$status" ]; then
+                  echo "App $app_name status: Not started/stopped yet."
+                else
+                  echo "App $app_name status: $status"
+                fi
+              else
+                echo "Failed to get status for app $app_name"
+                exit 1
+              fi
+            done
+          shell: bash
 
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Validate app status
-        run: |
-          app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o json | jq -r '.[]')
-
-          for app_name in $app_names; do
-            status=$(az spring app show --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "properties.activeDeployment.status" -o tsv)
-            if [ $? -eq 0 ]; then
-              echo "App $app_name status: $status"
-            else
-              echo "Failed to get status for app $app_name"
-              exit 1
-            fi
-          done
-        shell: bash
