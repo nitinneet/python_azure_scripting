@@ -74,7 +74,7 @@ jobs:
             app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o json | jq -r '.[]')
   
             for app_name in $app_names; do
-              status=$(az spring app show --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "properties.activeDeployment.status" -o tsv)
+              status=$(az spring app show --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "properties.activeDeployment.properties.status" -o tsv)
               if [ $? -eq 0 ]; then
                 if [ -z "$status" ]; then
                   echo "App $app_name status: Not started/stopped yet."
