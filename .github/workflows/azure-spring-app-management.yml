@@ -73,5 +73,4 @@ jobs:
           else
             app_names="${{ github.event.inputs.app_name }}"
           fi
-          echo "APP_NAMES=$app_names" >> $GITHUB_ENV
-          
+          echo "APP_NAMES=${app_names// /,}" >> $GITHUB_ENV
