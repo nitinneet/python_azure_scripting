@@ -69,10 +69,8 @@ jobs:
         id: set-app-names
         run: |
           if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
-            app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o tsv)
+            app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o json)
           else
-            app_names="${{ github.event.inputs.app_name }}"
+            app_names="[\"${{ github.event.inputs.app_name }}\"]"
           fi
-          printf -v app_names_str '%s,' $app_names
-          app_names_str="${app_names_str%,}"  # Remove the trailing comma
-          echo "APP_NAMES=$app_names_str" >> $GITHUB_ENV
+          echo "::set-output name=app_names::$app_names"
