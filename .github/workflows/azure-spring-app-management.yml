@@ -66,7 +66,7 @@ jobs:
             creds: ${{ secrets.AZURE_CREDENTIALS }}
   
         - name: Wait for apps to start/stop/restart
-          run: sleep 5m  # Wait for 5 minutes
+          run: sleep 300  # Wait for 5 minutes
           shell: bash
   
         - name: Validate app status
