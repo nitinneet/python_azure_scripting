@@ -32,7 +32,7 @@ jobs:
         run: |
           echo "Generating matrix..."
           if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
-            app_names=$(az spring app list --service "your-service-name" --resource-group "your-resource-group" --query "[].name" -o tsv)
+            app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o tsv)
           else
             IFS=',' read -r -a app_name_array <<< "${{ github.event.inputs.app_name }}"
             app_names="${app_name_array[*]}"
