@@ -42,41 +42,31 @@ jobs:
             json_array+="{\"app_name\":\"$app_name\", \"action\":\"${{ github.event.inputs.action }}\"},"
           done
           json_array="${json_array%?}]" # Remove the last comma and close the array
-          
-          # New way to set output
           echo "${json_array}" > matrix_payload.json
-          echo "MATRIX_JSON<<EOF" >> $GITHUB_ENV
-          cat matrix_payload.json >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
 
   manage-spring-app:
     needs: prepare-app-list
     runs-on: self-hosted
     strategy:
       fail-fast: false
-      matrix: ${{fromJson(env.MATRIX_JSON)}}
+      matrix:
+        json: ${{fromJson(needs.prepare-app-list.outputs.matrix)}}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Login to Azure
+      - name: Setup Azure CLI
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Execute action on app
         run: |
-          app_name=${{ matrix.app_name }}
-          action=${{ matrix.action }}
+          app_name=$(echo "${{ matrix.json }}" | jq -r ".app_name")
+          action=$(echo "${{ matrix.json }}" | jq -r ".action")
           echo "Executing $action action on $app_name"
           # Insert the commands to start/stop/restart the Azure Spring app based on $app_name and $action here
 
       - name: Check for errors
         run: |
-          wait
-          if [ $? -ne 0 ]; then
-            echo "An error occurred while executing the action on the app."
-            exit 1
-          fi
-        shell: bash
-        
+          # Optional: Insert any commands needed to check for errors after the action has been executed
