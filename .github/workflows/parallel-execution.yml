@@ -1,0 +1,98 @@
+name: Azure Spring App Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        description: 'Manage Spring App (start, stop, restart)'
+        required: true
+        options:
+          - start
+          - stop
+          - restart
+      app_name:
+        type: string
+        description: 'Name of the Azure Spring App (Use "ALL" for all apps, or comma-separated list for multiple apps)'
+        required: true
+
+jobs:
+  prepare-app-list:
+    runs-on: self-hosted
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Setup Azure CLI
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Generate apps list
+        id: set-matrix
+        run: |
+          if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
+            app_names=$(az spring app list --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "[].name" -o tsv)
+          else
+            IFS=',' read -r -a app_name_array <<< "${{ github.event.inputs.app_name }}"
+            app_names="${app_name_array[*]}"
+          fi
+          json_array="["
+          for app_name in $app_names; do
+            json_array+="{\"app_name\":\"$app_name\", \"action\":\"${{ github.event.inputs.action }}\"},"
+          done
+          json_array=${json_array%?} # Remove the last comma
+          json_array+="]"
+          echo "::set-output name=matrix::{\"include\":$json_array}"
+
+  manage-spring-app:
+    needs: prepare-app-list
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.prepare-app-list.outputs.matrix)}}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Execute action on app
+        run: |
+          app_name=${{ matrix.app_name }}
+          action=${{ matrix.action }}
+          current_status=$(az spring app show --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg" --query "properties.activeDeployment.properties.status" -o tsv)
+          echo "Current status of $app_name: $current_status"
+          case "$action" in
+            "start")
+              if [ "$current_status" == "Stopped" ]; then
+                az spring app start --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+              else
+                echo "Warning: Cannot start the app '$app_name' because it is already running."
+              fi
+              ;;
+            "stop")
+              if [ "$current_status" == "Running" ]; then
+                az spring app stop --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+              else
+                echo "Warning: Cannot stop the app '$app_name' because it is already stopped."
+              fi
+              ;;
+            "restart")
+              az spring app restart --name "$app_name" --service "free-trial-spring-app" --resource-group "free-trial-rg"
+              ;;
+            *)
+              echo "Invalid action specified."
+              ;;
+          esac
+        shell: bash
+
+      - name: Check for errors
+        run: |
+          if [ $? -ne 0 ]; then
+            echo "An error occurred while executing the action on the app."
+            exit 1
+          fi
+        shell: bash
