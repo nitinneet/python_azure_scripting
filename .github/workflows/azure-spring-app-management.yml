@@ -17,19 +17,38 @@ on:
         required: true
 
 jobs:
+  manual-approval:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request approval
+        uses: actions/github-script@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: workflow } = await github.actions.getWorkflow({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: context.workflow,
+            });
+            const { data: run } = await github.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflow.id,
+              ref: context.sha,
+              inputs: {
+                action: "${{ github.event.inputs.action }}",
+                app_name: "${{ github.event.inputs.app_name }}"
+              }
+            });
+            console.log(`Approval requested for action '${{ github.event.inputs.action }}' for app(s): '${{ github.event.inputs.app_name }}'`);
+            return;
+
   manage-spring-app:
     runs-on: self-hosted
+    needs: manual-approval
+    if: github.event_name != 'workflow_dispatch' || github.event.action == 'approved'
     steps:
-      - name: Confirm action
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: |
-          echo "Do you want to proceed with '${{ github.event.inputs.action }}' for app(s): '${{ github.event.inputs.app_name }}'? (yes/no)"
-          read confirmation
-          if [ "$confirmation" != "yes" ]; then
-            echo "Action aborted."
-            exit 1
-          fi
-
       - name: Checkout repository
         uses: actions/checkout@v2
 
