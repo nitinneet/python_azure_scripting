@@ -20,6 +20,16 @@ jobs:
   manage-spring-app:
     runs-on: self-hosted
     steps:
+      - name: Confirm action
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          echo "Do you want to proceed with '${{ github.event.inputs.action }}' for app(s): '${{ github.event.inputs.app_name }}'? (yes/no)"
+          read confirmation
+          if [ "$confirmation" != "yes" ]; then
+            echo "Action aborted."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v2
 
@@ -90,7 +100,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Wait for apps to start/stop/restart
-        run: sleep 60  # Adjusted to wait for 1 minutes
+        run: sleep 60  # Adjusted to wait for 1 minute
         shell: bash
 
       - name: Validate app status
