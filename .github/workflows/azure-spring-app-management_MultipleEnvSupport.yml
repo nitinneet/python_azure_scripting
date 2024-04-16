@@ -1,0 +1,165 @@
+# Configure Environment-Specific Secrets:
+# Store credentials for each environment as GitHub secrets, such as 
+# AZURE_CREDENTIALS_DEV 
+# AZURE_CREDENTIALS_STAGING
+# AZURE_CREDENTIALS_PROD
+
+name: Azure Spring App Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: 'Select the environment (dev, staging, prod)'
+        required: true
+        options:
+          - dev
+          - staging
+          - prod
+      action:
+        type: choice
+        description: 'Manage Spring App (start, stop, restart)'
+        required: true
+        options:
+          - start
+          - stop
+          - restart
+      app_name:
+        type: string
+        description: 'Name of the Azure Spring App (Use "ALL" for all apps, or comma-separated list for multiple apps)'
+        required: true
+
+jobs:
+  manage-spring-app:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets['AZURE_CREDENTIALS_' + github.event.inputs.environment | upper] }}
+
+      - name: Execute action on app
+        run: |
+          service_name=""
+          resource_group=""
+
+          # Set environment-specific variables
+          if [ "${{ github.event.inputs.environment }}" == "dev" ]; then
+            service_name="free-trial-spring-app"
+            resource_group="free-trial-rg"
+          elif [ "${{ github.event.inputs.environment }}" == "staging" ]; then
+            service_name="staging-service-name"
+            resource_group="staging-resource-group"
+          elif [ "${{ github.event.inputs.environment }}" == "prod" ]; then
+            service_name="prod-service-name"
+            resource_group="prod-resource-group"
+          fi
+
+          # Determine the app names based on input
+          if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
+            app_names=$(az spring app list --service "$service_name" --resource-group "$resource_group" --query "[].name" -o tsv)
+          elif [[ "${{ github.event.inputs.app_name }}" == *","* ]]; then
+            IFS=',' read -r -a app_name_array <<< "${{ github.event.inputs.app_name }}"
+            app_names="${app_name_array[@]}"
+          else
+            app_names="${{ github.event.inputs.app_name }}"
+          fi
+
+          for app_name in $app_names; do
+            current_status=$(az spring app show --name "$app_name" --service "$service_name" --resource-group "$resource_group" --query "properties.activeDeployment.properties.status" -o tsv)
+
+            case "${{ github.event.inputs.action }}" in
+              "start")
+                if [ "$current_status" == "Stopped" ]; then
+                  az spring app start --name "$app_name" --service "$service_name" --resource-group "$resource_group" &
+                else
+                  echo "Warning: Cannot start the app '$app_name' because it is already running."
+                fi
+                ;;
+              "stop")
+                if [ "$current_status" == "Running" ]; then
+                  az spring app stop --name "$app_name" --service "$service_name" --resource-group "$resource_group" &
+                else
+                  echo "Warning: Cannot stop the app '$app_name' because it is already stopped."
+                fi
+                ;;
+              "restart")
+                if [ "$current_status" == "Running" ]; then
+                  az spring app restart --name "$app_name" --service "$service_name" --resource-group "$resource_group" &
+                elif [ "$current_status" == "Stopped" ]; then
+                  echo "Warning: Cannot restart the app '$app_name' because it is stopped."
+                fi
+                ;;
+              *)
+                echo "Invalid action specified."
+                ;;
+            esac
+          done
+        shell: bash
+
+      - name: Check for errors
+        run: |
+          wait
+          if [ $? -ne 0 ]; then
+            echo "An error occurred while executing the action on the app."
+            exit 1
+          fi
+        shell: bash
+
+  validate-app-status:
+    runs-on: self-hosted
+    needs: manage-spring-app
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets['AZURE_CREDENTIALS_' + github.event.inputs.environment | upper] }}
+
+      - name: Wait for apps to start/stop/restart
+        run: sleep 60  # Adjusted to wait for 1 minute
+        shell: bash
+
+      - name: Validate app status
+        run: |
+          service_name=""
+          resource_group=""
+
+          # Set environment-specific variables
+          if [ "${{ github.event.inputs.environment }}" == "dev" ]; then
+            service_name="dev-service-name"
+            resource_group="dev-resource-group"
+          elif [ "${{ github.event.inputs.environment }}" == "staging" ]; then
+            service_name="staging-service-name"
+            resource_group="staging-resource-group"
+          elif [ "${{ github.event.inputs.environment }}" == "prod" ]; then
+            service_name="prod-service-name"
+            resource_group="prod-resource-group"
+          fi
+
+          if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
+            app_names=$(az spring app list --service "$service_name" --resource_group "$resource_group" --query "[].name" -o tsv)
+          elif [[ "${{ github.event.inputs.app_name }}" == *","* ]]; then
+            IFS=',' read -r -a app_name_array <<< "${{ github.event.inputs.app_name }}"
+            app_names="${app_name_array[@]}"
+          else
+            app_names="${{ github.event.inputs.app_name }}"
+          fi
+
+          for app_name in $app_names; do
+            status=$(az spring app show --name "$app_name" --service "$service_name" --resource-group "$resource_group" --query "properties.activeDeployment.properties.status" -o tsv)
+            if [ $? -eq 0 ]; then
+              if [ -z "$status" ]; then
+                echo "App $app_name status: Not started/stopped yet."
+              else
+                echo "App $app_name status: $status"
+              fi
+            else
+              echo "Failed to get status for app $app_name"
+              exit 1
+            fi
+          done
+        shell: bash
