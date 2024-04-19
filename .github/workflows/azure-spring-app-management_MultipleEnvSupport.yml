@@ -1,8 +1,17 @@
-# Configure Environment-Specific Secrets:
-# Store credentials for each environment as GitHub secrets, such as 
-# AZURE_CREDENTIALS_DEV 
-# AZURE_CREDENTIALS_STAGING
-# AZURE_CREDENTIALS_PROD
+# For Development Environment (dev):
+# Create a secret named AZURE_CREDENTIALS_DEV (or any suitable name) and set its value to the credentials (e.g., Azure Service Principal or a management certificate) that have permissions to manage the resources in your development environment.
+# For Staging Environment (staging):
+# Create a secret named AZURE_CREDENTIALS_STAGING (or any suitable name) and set its value to the credentials for your staging environment.
+# For Production Environment (prod):
+# Create a secret named AZURE_CREDENTIALS_PROD (or any suitable name) and set its value to the credentials for your production environment.
+#######################################################################
+# For Development Environment (dev):
+# Create an environment variable named DEV_SPRING_APP_NAME (or any suitable name) and set its value to the service name of your Azure Spring App for the development environment. For example, dev-spring-app.
+# For Staging Environment (staging):
+# Create an environment variable named STAGING_SPRING_APP_NAME (or any suitable name) and set its value to the service name of your Azure Spring App for the staging environment. For example, staging-spring-app.
+# For Production Environment (prod):
+# Create an environment variable named PROD_SPRING_APP_NAME (or any suitable name) and set its value to the service name of your Azure Spring App for the production environment. For example, prod-spring-app.
+#########################################################################
 
 name: Azure Spring App Management
 
@@ -33,6 +42,7 @@ on:
 jobs:
   manage-spring-app:
     runs-on: self-hosted
+    environment: ${{ github.event.inputs.environment }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -44,20 +54,8 @@ jobs:
 
       - name: Execute action on app
         run: |
-          service_name=""
-          resource_group=""
-
-          # Set environment-specific variables
-          if [ "${{ github.event.inputs.environment }}" == "dev" ]; then
-            service_name="free-trial-spring-app"
-            resource_group="free-trial-rg"
-          elif [ "${{ github.event.inputs.environment }}" == "staging" ]; then
-            service_name="staging-service-name"
-            resource_group="staging-resource-group"
-          elif [ "${{ github.event.inputs.environment }}" == "prod" ]; then
-            service_name="prod-service-name"
-            resource_group="prod-resource-group"
-          fi
+          service_name=$SERVICE_NAME
+          resource_group=$RESOURCE_GROUP
 
           # Determine the app names based on input
           if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
@@ -112,6 +110,7 @@ jobs:
 
   validate-app-status:
     runs-on: self-hosted
+    environment: ${{ github.event.inputs.environment }}
     needs: manage-spring-app
     steps:
       - name: Login to Azure
@@ -125,23 +124,11 @@ jobs:
 
       - name: Validate app status
         run: |
-          service_name=""
-          resource_group=""
-
-          # Set environment-specific variables
-          if [ "${{ github.event.inputs.environment }}" == "dev" ]; then
-            service_name="dev-service-name"
-            resource_group="dev-resource-group"
-          elif [ "${{ github.event.inputs.environment }}" == "staging" ]; then
-            service_name="staging-service-name"
-            resource_group="staging-resource-group"
-          elif [ "${{ github.event.inputs.environment }}" == "prod" ]; then
-            service_name="prod-service-name"
-            resource_group="prod-resource-group"
-          fi
+          service_name=$SERVICE_NAME
+          resource_group=$RESOURCE_GROUP
 
           if [ "${{ github.event.inputs.app_name }}" == "ALL" ]; then
-            app_names=$(az spring app list --service "$service_name" --resource_group "$resource_group" --query "[].name" -o tsv)
+            app_names=$(az spring app list --service "$service_name" --resource-group "$resource_group" --query "[].name" -o tsv)
           elif [[ "${{ github.event.inputs.app_name }}" == *","* ]]; then
             IFS=',' read -r -a app_name_array <<< "${{ github.event.inputs.app_name }}"
             app_names="${app_name_array[@]}"
