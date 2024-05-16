@@ -1,1 +1,1 @@
-# python_azure_scripting
+# Azure app Start/Stop/restart using github action
